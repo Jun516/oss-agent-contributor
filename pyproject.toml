@@ -1,0 +1,9 @@
+[project]
+name = "oss-agent-contributor"
+version = "0.2.1"
+description = "Owner-authorized autonomous open-source PR pipeline with independent review"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
