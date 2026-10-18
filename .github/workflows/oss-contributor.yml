@@ -28,7 +28,7 @@ jobs:
           python-version: '3.12'
       - name: Discover qualified public issue (no repository writes)
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.OSS_DISCOVERY_TOKEN || github.token }}
         run: python -m oss_contributor.core discover --out scan.json
       - id: select
         name: Set candidate flag
@@ -40,6 +40,7 @@ jobs:
           print('has_candidate=' + str(obj['candidate'] is not None).lower())
           PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 pinned
+        if: always()
         with:
           name: scan-report
           path: scan.json
@@ -64,7 +65,7 @@ jobs:
           name: scan-report
       - name: Require a currently unclaimed issue and unchanged baseline
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.OSS_DISCOVERY_TOKEN || github.token }}
         run: |
           python -m oss_contributor.core preflight --candidate scan.json
           python -m oss_contributor.core checkout --candidate scan.json --target target
