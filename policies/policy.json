@@ -1,0 +1,26 @@
+{
+  "owner": "Jun516",
+  "min_stars": 5000,
+  "max_repos_per_scan": 12,
+  "max_issues_per_repo": 5,
+  "allowed_licenses": [
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "ISC"
+  ],
+  "excluded_repositories": [
+    "exa-labs/exa-py"
+  ],
+  "max_changed_files": 5,
+  "max_patch_bytes": 90000,
+  "max_test_commands": 4,
+  "max_test_seconds": 600,
+  "allow_new_dependencies": false,
+  "allow_workflow_changes": false,
+  "allow_generated_api_changes": false,
+  "publication_policy": "preauthorized",
+  "schema_version": 1,
+  "max_automatic_prs_per_24h": 4,
+  "automatic_publication_scope": "one_issue_one_pr"
+}
