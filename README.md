@@ -26,6 +26,7 @@ GitHub Actions 17 */3 * * * (UTC) / workflow_dispatch
 1. 在你的 Windows 电脑解压本 ZIP，安装 Git、GitHub CLI（`gh`），执行 `gh auth login --web`，确认 `gh api user --jq .login` 输出 `Jun516`。在解压目录执行 `./deploy.ps1`。它会新建 `Jun516/oss-agent-contributor`（公开仓库）并推送整个控制器工程；如果仓库已经存在，将停止自动推送，以免覆盖已有项目。Linux/macOS 使用 `./deploy.sh`。
 2. 在控制器仓库 **Settings → Secrets and variables → Actions → Secrets** 配置两个 Secret：
    - `OPENAI_API_KEY`：可用于 Codex Action 的 OpenAI **API** 凭证；与 ChatGPT Plus 订阅无关。设置预算上限、使用提醒。
+   - `OSS_DISCOVERY_TOKEN`：**推荐配置**用于跨仓库只读查询的专用 GitHub 用户令牌。使用权限尽可能少、能够读取公开仓库 Issue 和搜索 API 的令牌，不要使用发布用的 `OSS_BOT_TOKEN` 替代。未配置时回退到仓库自带的 `GITHUB_TOKEN`；它可能因为跨仓库访问权限返回 HTTP 403。仅保存为 GitHub Actions Secret。
    - `OSS_BOT_TOKEN`：**仅该系统发布 Job 使用**的 `Jun516` GitHub 授权 Token。需能对 `Jun516` 创建公共 Fork/写入个人 Fork，并能向目标上游发起 PR；能否跨仓库创建 PR 取决于 Token 类型、目标仓库政策和 GitHub 设置。当前发布器强制校验 `gh api user` 必须返回 `Jun516`，因此请使用能够以 `Jun516` 用户身份执行跨仓库 Fork / PR 的个人访问令牌。优先确认 Fine-grained Token 是否能完成目标公共仓库的完整写入链；某些跨仓库场景可能需要具有 `public_repo` 权限的 Classic PAT。Classic PAT 权限更宽，应缩短有效期、定期轮换，并设置预算和监控。不要使用 GitHub Actions 内置 `GITHUB_TOKEN` 冒充跨仓库发布 Token。绝不要把密钥发送到聊天中。
 3. 打开控制器仓库 **Actions**，手动执行一次 `OSS Contributor (autonomous)`，阅读 Scan、Propose、Test、Review、Publication artifacts。若发现候选且全部验证通过，会按照本配置自动创建一个 PR；没有候选则不会生成 PR。这也是首次真实端到端验证方式。
 4. 如果想随时**暂停自动发布**，在控制器仓库 **Actions → Variables** 创建 `PAUSE_AUTOPUBLISH=true`；会继续发现候选和验证，但 Publish Job 不运行。设为 `false` 或删除变量才能恢复自动发布。
@@ -55,3 +56,9 @@ python -m compileall -q oss_contributor
 ## 必须完成的首次验收
 
 记录这五项真实证据：① 成功的 Actions Run URL；② 已生成的 scan-report；③ 独立 verify 测试报告（指定 upstream SHA/patch SHA）；④ 只读审核报告；⑤ 若通过，则 GitHub PR URL、CI 状态以及 Review 状态。没有第五项不代表失败：可能根本没有合格候选。实际失败须按日志排查，不要编造 PR。
+
+## 首次云端巡检排障（2026-10-18）
+
+首次真实运行 `39107679921` 的 Discover 遇到 `/search/issues` HTTP 403，但旧版本把异常误判为扫描成功。本次修复会将 GitHub API 403、超时、鉴权和限流错误写进 `scan-report` 的 `incomplete` 状态，同时使 Discover Job 失败，避免声称“没有合格候选”。如果再次遇到 403，查看 GitHub 返回的错误摘要和 `rate_remaining`、`retry_after`；权限不足时配置独立只读 `OSS_DISCOVERY_TOKEN`，遇到限流时等待重试。扫描完整结束且没有异常时，才将“无候选”视为正常。
+
+请保留 `PAUSE_AUTOPUBLISH=true`，直到真正完成发现、修复、独立测试、审核与发布权限的受控端到端验收。
