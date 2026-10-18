@@ -333,3 +333,26 @@ def test_publisher_full_flow_with_local_git_remote_and_mocked_github(monkeypatch
     branch="ossbot/issue-991-"+sha[:10]
     cp=subprocess.run(["git","--git-dir",str(bare),"rev-parse",f"refs/heads/{branch}"],text=True,capture_output=True,check=True)
     assert len(cp.stdout.strip())==40  # A real Git commit was pushed into the simulated fork
+
+
+def test_discovery_api_error_fails_job_but_keeps_evidence(monkeypatch, tmp_path):
+    def fail_search(_path):
+        raise core.Blocked("GitHub API HTTP 403 at /search/issues: Resource not accessible by integration")
+    monkeypatch.setattr(core, "api", fail_search)
+    out = tmp_path / "scan.json"
+    with pytest.raises(core.Blocked, match="HTTP 403"):
+        core.discover(out)
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert report["candidate"] is None
+    assert report["summary"]["incomplete"] is True
+    assert "HTTP 403" in report["summary"]["notes"][0]
+
+
+def test_discovery_read_only_token_is_scoped_to_preflight_and_not_codex():
+    from pathlib import Path
+    raw = (core.ROOT / ".github/workflows/oss-contributor.yml").read_text(encoding="utf-8")
+    assert raw.count("secrets.OSS_DISCOVERY_TOKEN || github.token") == 2
+    assert "if: always()\n        with:\n          name: scan-report" in raw
+    # The publishing token remains strictly isolated to the publish job.
+    unprivileged = raw.split("  publish:", 1)[0]
+    assert "OSS_BOT_TOKEN" not in unprivileged
