@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "approved": {"type": "boolean"},
+    "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+    "reason": {"type": "string"}
+  },
+  "required": ["approved", "risk", "reason"],
+  "additionalProperties": false
+}
