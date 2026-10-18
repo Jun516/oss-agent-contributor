@@ -1,9 +1,8 @@
 name: OSS Contributor (autonomous)
 
+# Automatic scheduled runs have been disabled at the user's request.
+# Manual dispatch remains available; publishing is paused independently.
 on:
-  schedule:
-    # Offset from the top of the hour to reduce predictable scheduling pressure.
-    - cron: '17 */3 * * *'
   workflow_dispatch:
 
 permissions:
