@@ -44,7 +44,19 @@ def api(path: str, token: str | None = None):
     except urllib.error.HTTPError as err:
         if err.code == 404:
             return None
-        raise Blocked(f"GitHub API request failed: HTTP {err.code}, path={path.split('?')[0]}") from err
+        # A 403 may mean insufficient integration permissions OR a GitHub rate limit.
+        # Keep only GitHub's short error message and response headers; never log tokens.
+        try:
+            response_error = json.loads(err.read(2048).decode("utf-8", "replace"))
+            reason = str(response_error.get("message", "unknown"))[:200]
+        except (ValueError, OSError, AttributeError):
+            reason = "unknown"
+        remaining = err.headers.get("X-RateLimit-Remaining", "unknown") if err.headers else "unknown"
+        retry_after = err.headers.get("Retry-After", "none") if err.headers else "none"
+        raise Blocked(
+            f"GitHub API HTTP {err.code} at {path.split('?')[0]}: {reason}; "
+            f"rate_remaining={remaining}; retry_after={retry_after}"
+        ) from err
 
 
 def repo_path(repo: str) -> str:
@@ -171,9 +183,13 @@ def discover(out: Path):
             if result["candidate"]:
                 break
     except (Blocked, urllib.error.URLError, TimeoutError) as exc:
-        result["summary"]["notes"].append(f"Scan stopped: {type(exc).__name__}: {str(exc)[:200]}")
+        error = f"Scan stopped: {type(exc).__name__}: {str(exc)[:400]}"
+        result["summary"]["notes"].append(error)
+        result["summary"]["incomplete"] = True
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if result["summary"].get("incomplete"):
+        raise Blocked(result["summary"]["notes"][-1])
     return result
 
 
